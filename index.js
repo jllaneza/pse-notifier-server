@@ -10,13 +10,13 @@ admin.initializeApp({
 });
 
 // needs to initialize admin before passing it to db
-const { getAlerts } = require('./db')(admin);
+const { getAlerts, markAlertAsExecuted } = require('./db')(admin);
 
 const getAlertNotifications = async () => {
   const alerts = await getAlerts();
   const stocks = [...new Set(alerts.map(alert => alert.symbol))];
   const stockPrices = await getStocksCurrentPrice(stocks);
-  console.log(stockPrices);
+
   return alerts.filter(alert => {
     const { symbol, price, isAbove } = alert;
     const currentPrice = stockPrices[symbol];
@@ -26,13 +26,28 @@ const getAlertNotifications = async () => {
     }
     return currentPrice <= price;
   });
-}
+};
+
+const notifyUser = alert => {
+  const { registrationToken, symbol, price } = alert;
+  const payload = {
+    data: {
+      symbol,
+      price: price + ''
+    },
+    token: registrationToken
+  };
+  // TODO: mark the notification as complete/executed
+  return admin.messaging()
+    .send(payload)
+    .then(messageId => console.log(`messageId: ${messageId}`))
+    .then(() => markAlertAsExecuted(alert));
+};
 
 // schedule job to run every 15 seconds on weekdays from 9am - 1pm
 cron.schedule('*/15 * 9-12 * * 1-5', () => {
   getAlertNotifications()
-    .then(notifications => {
-      // TODO: send the notifications to respective devices
-      console.log(notifications)
-    });
+    .then(notifications => Promise.all(notifications.map(notif => notifyUser(notif))))
+    .then(console.log)
+    .catch(console.log)
 });

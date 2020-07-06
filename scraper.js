@@ -19,8 +19,8 @@ const getAllStocksCurrentPrice = async () => {
 const getStocksCurrentPrice = async (stockCodes) => {
   let stockPrices = {};
   try {
-    const prices = await Promise.all(stockCodes.map(getStockCurrentPrice));
-    stockPrices = stocks.reduce((accumulator, currentValue, index) => {
+    const prices = await Promise.all(stockCodes.map(getCurrentPriceOfStock));
+    stockPrices = stockCodes.reduce((accumulator, currentValue, index) => {
       accumulator[currentValue] = prices[index];
       return accumulator;
     }, {});

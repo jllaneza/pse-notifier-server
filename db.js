@@ -9,11 +9,12 @@ module.exports = (admin) => {
   };
   const getUserDeviceEnabledAlerts = async (doc) => {
     const snapshot = await doc.collection(alertsCollection)
-    .where('isEnable', '==', true)
-    .get();
-    
+      .where('isEnable', '==', true)
+      .where('isExecuted', '==', false)
+      .get();
+
     return !snapshot.empty
-      ? snapshot.docs.map(subDoc => ({ ...subDoc.data(), registrationToken: doc.id }))
+      ? snapshot.docs.map(subDoc => ({ ...subDoc.data(), id: subDoc.id, registrationToken: doc.id }))
       : [];
   };
 
@@ -23,6 +24,15 @@ module.exports = (admin) => {
       docs.map(getUserDeviceEnabledAlerts)
     );
     return [].concat(...results);
+  };
+
+  module.markAlertAsExecuted = async (alert) => {
+    const { registrationToken, id } = alert;
+    return db.collection(userDeviceCollection)
+      .doc(registrationToken)   // UserDevices doc id
+      .collection(alertsCollection)  
+      .doc(id)                  // Alerts doc id
+      .update({ isExecuted: true });
   };
 
   return module;
